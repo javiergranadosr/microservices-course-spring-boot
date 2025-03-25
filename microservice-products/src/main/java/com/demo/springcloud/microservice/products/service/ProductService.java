@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.demo.springcloud.microservice.products.entity.Product;
+import com.demo.springcloud.microservice.products.enums.ExceptionMessageEnum;
 import com.demo.springcloud.microservice.products.exception.ErrorNotFoundException;
 import com.demo.springcloud.microservice.products.record.ProductRequest;
 import com.demo.springcloud.microservice.products.record.ProductResponse;
@@ -23,18 +24,32 @@ public class ProductService implements IProductService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Product> findAll() {
-        return (List<Product>) this.repository.findAll();
+    public List<ProductResponse> findAll() {
+        List<Product> products = (List<Product>) this.repository.findAll();
+        return products.stream()
+                .map(p -> new ProductResponse(
+                        p.getId(),
+                        p.getName(),
+                        p.getPrice(),
+                        p.getCreatedAt(),
+                        p.getUpdatedAt()))
+                .toList();
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Product findById(Long id) {
+    public ProductResponse findById(Long id) {
         Optional<Product> product = this.repository.findById(id);
         if (!product.isPresent()) {
-            throw new ErrorNotFoundException("Product not found try again");
+            throw new ErrorNotFoundException(ExceptionMessageEnum.ERROR_NOT_FOUND.getMessage());
         }
-        return product.get();
+        Product tempProduct = product.get();
+        return new ProductResponse(
+                tempProduct.getId(),
+                tempProduct.getName(),
+                tempProduct.getPrice(),
+                tempProduct.getCreatedAt(),
+                tempProduct.getUpdatedAt());
     }
 
     @Override
@@ -44,14 +59,12 @@ public class ProductService implements IProductService {
         product.setName(data.name());
         product.setPrice(data.price());
         Product tempProduct = this.repository.save(product);
-        ProductResponse response = new ProductResponse(
+        return new ProductResponse(
                 tempProduct.getId(),
                 tempProduct.getName(),
                 tempProduct.getPrice(),
                 tempProduct.getCreatedAt(),
                 tempProduct.getUpdatedAt());
-
-        return response;
     }
 
     @Override
@@ -59,21 +72,19 @@ public class ProductService implements IProductService {
     public ProductResponse update(Long id, ProductRequest data) {
         Optional<Product> product = this.repository.findById(id);
         if (!product.isPresent()) {
-            throw new ErrorNotFoundException("Product not found try again");
+            throw new ErrorNotFoundException(ExceptionMessageEnum.ERROR_NOT_FOUND.getMessage());
         }
 
         product.get().setName(data.name());
         product.get().setPrice(data.price());
 
         Product tempProduct = this.repository.save(product.get());
-        ProductResponse response = new ProductResponse(
+        return new ProductResponse(
                 tempProduct.getId(),
                 tempProduct.getName(),
                 tempProduct.getPrice(),
                 tempProduct.getCreatedAt(),
                 tempProduct.getUpdatedAt());
-
-        return response;
     }
 
     @Override
@@ -81,9 +92,8 @@ public class ProductService implements IProductService {
     public void delete(Long id) {
         Optional<Product> product = this.repository.findById(id);
         if (!product.isPresent()) {
-            throw new ErrorNotFoundException("Product not found try again");
+            throw new ErrorNotFoundException(ExceptionMessageEnum.ERROR_NOT_FOUND.getMessage());
         }
         this.repository.delete(product.get());
     }
-
 }
